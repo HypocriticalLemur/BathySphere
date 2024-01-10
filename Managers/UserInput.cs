@@ -50,7 +50,9 @@ public class UserInput : MonoBehaviour
         NewUpdateFunc();
     }
     void NewUpdateFunc(){
-        foreach (var action, var legate in _actions){
+        foreach (KeyValuePair<UserActions, DelegateKeyAction> item in _actions){
+            var action = item.key;
+            var legate = item.value;
             bool keyPressed = false;
             bool keyReleased = false;
             HashSet<KeyCode> keys = bindings.GetBindings(action);
@@ -59,12 +61,12 @@ public class UserInput : MonoBehaviour
                 if (Input.GetKeyDown(key))
                 {
                     keyPressed = true;
-                    Debug.Log($"key {key} pressed!");
+                    Debug.Log($"{action} key {key} pressed!");
                 }
                 else if (Input.GetKeyUp(key))
                 {
                     keyReleased = true;
-                    Debug.Log($"key {key} released!");
+                    Debug.Log($"{action} key {key} released!");
                 }
             }
             if (keyPressed)
