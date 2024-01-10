@@ -6,7 +6,7 @@ using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class BathysphereMove : MonoBehaviour
 {
-    Medium medium = Water();
+    Water medium;
     public Rigidbody rb;
     /// <summary>
     /// threshold for Reynolds number and velocity magnitude
@@ -20,7 +20,7 @@ public class BathysphereMove : MonoBehaviour
     /// <summary>
     /// with 3800 Nutons sphere moves at speed around 5 m/s
     /// </summary>
-    const float BASE_DRAG_FORCE = 3800f;
+    const float BASE_DRAG_FORCE = 5000f;
     float dragScaleFactor = .25f;
     /// <summary>
     /// for debugging
@@ -93,7 +93,7 @@ public class BathysphereMove : MonoBehaviour
         float fricForce = GetFrictionForce();
         float totalForce = dragForce - fricForce;
         if (breakForceEnabled) {
-            totalForce -= GetBrakeForce()
+            totalForce -= GetBrakeForce();
         }
         _frictionForceContribution = fricForce / dragForce * 100;
         
@@ -108,7 +108,7 @@ public class BathysphereMove : MonoBehaviour
         if (velocityMagnitude < THRESHOLD){
             return 0;
         }
-        float force = Mathf.Sqrt(velocityMagnitude) * 1000;
+        float force = Mathf.Sqrt(velocityMagnitude) * 3 * BASE_DRAG_FORCE;
         if (!areWeMovingForward)
             force *= -1;
         return force;
@@ -147,17 +147,28 @@ public class BathysphereMove : MonoBehaviour
         float force = velocityLevel * BASE_DRAG_FORCE * dragScaleFactor;
         return force;
     }
+
+    private void Awake()
+    {
+        if (!(medium is Medium))
+        {
+            throw new Exception($"Bathysphere field 'medium' does not impliment 'Medium' interface! Fix it!");
+        }
+    }
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         UserInput userInput = UserInput.instance;
         if (userInput == null)
-            Console.Log("UserInput script was not instantiated! Attach the script to a game object!");
-        userInput.MoveForward  += IncreaseVelocityLevel;
+            Debug.LogError("UserInput script was not instantiated! Attach the script to a game object!");
+        userInput._actions[UserActions.Forward ].Add(new DelegateKeyAction(delegate () { IncreaseVelocityLevel(); }, null) );
+        userInput._actions[UserActions.Backward].Add(new DelegateKeyAction(delegate () { DecreaseVelocityLevel(); }, null));
+        userInput._actions[UserActions.Brake   ].Add(new DelegateKeyAction(delegate () { EnableBrakeForce(); }, delegate () { DisableBrakeForce(); }));
+/*        userInput.MoveForward  += IncreaseVelocityLevel;
         userInput.MoveBackward += DecreaseVelocityLevel;
         userInput.EnableBrake  += EnableBrakeForce;
-        userInput.DisableBrake += DisableBrakeForce;
+        userInput.DisableBrake += DisableBrakeForce;*/
     }
 
     // Update is called once per frame

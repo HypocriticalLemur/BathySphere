@@ -1,10 +1,10 @@
-﻿public abstract class Medium{
-    public abstract const float DENSITY;
-    public abstract const float DYNAMIC_VISCOUSITY;
+﻿public interface Medium{
+    public float DENSITY { get; }
+    public float DYNAMIC_VISCOUSITY { get; }
 }
 
-public class Water : Medium
+public struct Water : Medium
 {
-    public override const float DENSITY = 1100f;
-    public override const float DYNAMIC_VISCOUSITY = 1788e-6f;
+    public float DENSITY => 1100f;
+    public float DYNAMIC_VISCOUSITY => 1788e-6f;
 }

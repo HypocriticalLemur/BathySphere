@@ -1,13 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UserInput;
 
+public struct DelegateKeyAction
+{
+    public BathysphereMoveDelegate enable;// = null;
+    public BathysphereMoveDelegate disable;// = null;
+    public DelegateKeyAction(BathysphereMoveDelegate _enable, BathysphereMoveDelegate _disable)
+    {
+        enable = _enable;
+        disable = _disable;
+    }
+}
 public class UserInput : MonoBehaviour
 {
-    struct DelegateKeyAction{
-        public BathysphereMoveDelegate enable  = null;
-        public BathysphereMoveDelegate disable = null;
-        public DelegateKeyAction (BathysphereMoveDelegate _enable, BathysphereMoveDelegate _disable) : enable(_enable), disable(_disable) { };
+    public class MyEventManager
+    {
+
+        public event BathysphereMoveDelegate MyEvent;
+        public void CallMyEvent() { MyEvent.Invoke(); }
     }
     KeyBindings bindings => KeyBindings.instance;
     public delegate void BathysphereMoveDelegate();
@@ -20,15 +32,24 @@ public class UserInput : MonoBehaviour
     public event BathysphereMoveDelegate TurnLeft;
     public event BathysphereMoveDelegate TurnRight;
 
-    Dictionary<UserActions, DelegateKeyAction> _actions = new() {
-        { UserActions.Forward , new DelegateKeyAction(MoveForward, null) },
-        { UserActions.Backward, new DelegateKeyAction(MoveBackward, null) },
-        { UserActions.Left    , new DelegateKeyAction(TurnLeft, null) },
-        { UserActions.Right   , new DelegateKeyAction(TurnRight, null) },
-        { UserActions.Up      , new DelegateKeyAction(MoveUp, null) },
-        { UserActions.Down    , new DelegateKeyAction(MoveDown, null) },
-        { UserActions.Brake   , new DelegateKeyAction(EnableBrake, DisableBrake) }
-    }
+    /*    Dictionary<UserActions, DelegateKeyAction> _actions = new() {
+            { UserActions.Forward , new DelegateKeyAction(MoveForward, null) },
+            { UserActions.Backward, new DelegateKeyAction(MoveBackward, null) },
+            { UserActions.Left    , new DelegateKeyAction(TurnLeft, null) },
+            { UserActions.Right   , new DelegateKeyAction(TurnRight, null) },
+            { UserActions.Up      , new DelegateKeyAction(MoveUp, null) },
+            { UserActions.Down    , new DelegateKeyAction(MoveDown, null) },
+            { UserActions.Brake   , new DelegateKeyAction(EnableBrake, DisableBrake) }
+        };*/
+    public Dictionary<UserActions, HashSet<DelegateKeyAction>> _actions = new(){
+            { UserActions.Forward , new HashSet<DelegateKeyAction>()},
+            { UserActions.Backward, new HashSet<DelegateKeyAction>()},
+            { UserActions.Left    , new HashSet<DelegateKeyAction>()},
+            { UserActions.Right   , new HashSet<DelegateKeyAction>()},
+            { UserActions.Up      , new HashSet<DelegateKeyAction>()},
+            { UserActions.Down    , new HashSet<DelegateKeyAction>()},
+            { UserActions.Brake   , new HashSet<DelegateKeyAction>()}
+        };
 
     public static UserInput instance;
     private void Awake()
@@ -50,9 +71,9 @@ public class UserInput : MonoBehaviour
         NewUpdateFunc();
     }
     void NewUpdateFunc(){
-        foreach (KeyValuePair<UserActions, DelegateKeyAction> item in _actions){
-            var action = item.key;
-            var legate = item.value;
+        foreach (KeyValuePair<UserActions, HashSet<DelegateKeyAction>> item in _actions){
+            var action = item.Key;
+            var legates = item.Value;
             bool keyPressed = false;
             bool keyReleased = false;
             HashSet<KeyCode> keys = bindings.GetBindings(action);
@@ -70,9 +91,13 @@ public class UserInput : MonoBehaviour
                 }
             }
             if (keyPressed)
-                legate.enable ?.Invoke();
+                foreach(var legate in legates)
+                    if (legate.enable != null)
+                        legate.enable();
             if (keyReleased)
-                legate.disable?.Invoke();
+                foreach (var legate in legates)
+                    if (legate.disable != null)
+                        legate.disable();
 
         }
     }
