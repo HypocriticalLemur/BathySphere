@@ -6,13 +6,15 @@ public enum UserActions {
     Forward,
     Backward,
     Left,
-    Right
+    Right,
+    Brake
 };
 public class KeyBindings : MonoBehaviour
 {
     private Dictionary<UserActions, HashSet<KeyCode>> _actions = new() {
         { UserActions.Forward, new HashSet<KeyCode>() { KeyCode.W } },
-        { UserActions.Backward, new HashSet<KeyCode>() { KeyCode.S } }
+        { UserActions.Backward, new HashSet<KeyCode>() { KeyCode.S } },
+        { UserActions.Brake, new HashSet<KeyCode>() { KeyCode.Space } }
     };
     static public KeyBindings instance = null;
     private void Awake()

@@ -8,6 +8,8 @@ public class UserInput : MonoBehaviour
     public delegate void BathysphereMoveDelegate();
     public event BathysphereMoveDelegate MoveForward;
     public event BathysphereMoveDelegate MoveBackward;
+    public event BathysphereMoveDelegate EnableBrake;
+    public event BathysphereMoveDelegate DisableBrake;
     public static UserInput instance;
     private void Awake()
     {
@@ -50,5 +52,26 @@ public class UserInput : MonoBehaviour
         }
         if (backwardPressed)
             MoveBackward?.Invoke();
+
+        bool brakePressed = false;
+        bool brakeReleased = false;
+        keys = bindings.GetBindings(UserActions.Backward);
+        foreach (var key in keys)
+        {
+            if (Input.GetKeyDown(key))
+            {
+                brakePressed = true;
+                Debug.Log($"brake key {key} pressed!");
+            }
+            if (Input.GetKeyUp(key))
+            {
+                brakeReleased = true;
+                Debug.Log($"brake key {key} released!");
+            }
+        }
+        if (brakePressed)
+            EnableBrake?.Invoke();
+        else if (brakeReleased)
+            DisableBrake?.Invoke();
     }
 }
