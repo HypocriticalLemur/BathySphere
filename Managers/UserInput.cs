@@ -4,12 +4,32 @@ using UnityEngine;
 
 public class UserInput : MonoBehaviour
 {
+    struct DelegateKeyAction{
+        public BathysphereMoveDelegate enable  = null;
+        public BathysphereMoveDelegate disable = null;
+        public DelegateKeyAction (BathysphereMoveDelegate _enable, BathysphereMoveDelegate _disable) : enable(_enable), disable(_disable) { };
+    }
     KeyBindings bindings => KeyBindings.instance;
     public delegate void BathysphereMoveDelegate();
     public event BathysphereMoveDelegate MoveForward;
     public event BathysphereMoveDelegate MoveBackward;
+    public event BathysphereMoveDelegate MoveUp;
+    public event BathysphereMoveDelegate MoveDown;
     public event BathysphereMoveDelegate EnableBrake;
     public event BathysphereMoveDelegate DisableBrake;
+    public event BathysphereMoveDelegate TurnLeft;
+    public event BathysphereMoveDelegate TurnRight;
+
+    Dictionary<UserActions, DelegateKeyAction> _actions = new() {
+        { UserActions.Forward , new DelegateKeyAction(MoveForward, null) },
+        { UserActions.Backward, new DelegateKeyAction(MoveBackward, null) },
+        { UserActions.Left    , new DelegateKeyAction(TurnLeft, null) },
+        { UserActions.Right   , new DelegateKeyAction(TurnRight, null) },
+        { UserActions.Up      , new DelegateKeyAction(MoveUp, null) },
+        { UserActions.Down    , new DelegateKeyAction(MoveDown, null) },
+        { UserActions.Brake   , new DelegateKeyAction(EnableBrake, DisableBrake) }
+    }
+
     public static UserInput instance;
     private void Awake()
     {
@@ -27,6 +47,35 @@ public class UserInput : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        NewUpdateFunc();
+    }
+    void NewUpdateFunc(){
+        foreach (var action, var legate in _actions){
+            bool keyPressed = false;
+            bool keyReleased = false;
+            HashSet<KeyCode> keys = bindings.GetBindings(action);
+            foreach (var key in keys)
+            {
+                if (Input.GetKeyDown(key))
+                {
+                    keyPressed = true;
+                    Debug.Log($"key {key} pressed!");
+                }
+                else if (Input.GetKeyUp(key))
+                {
+                    keyReleased = true;
+                    Debug.Log($"key {key} released!");
+                }
+            }
+            if (keyPressed)
+                legate.enable ?.Invoke();
+            if (keyReleased)
+                legate.disable?.Invoke();
+
+        }
+    }
+    void OldUpdateFunc(){
+
         bool forwardPressed = false;
         HashSet<KeyCode> keys = bindings.GetBindings(UserActions.Forward);
         foreach (var key in keys)
