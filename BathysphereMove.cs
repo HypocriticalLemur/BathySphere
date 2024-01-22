@@ -6,17 +6,18 @@ using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class BathysphereMove : MonoBehaviour
 {
+    const float MIDSECTION = PI * RADIUS * RADIUS;
     Water medium;
-    public Rigidbody rb;
+    Rigidbody rb;
     /// <summary>
     /// threshold for Reynolds number and velocity magnitude
     /// </summary>
     const float THRESHOLD = 1e-4f;
     const float PI = 3.1415926f;
     const float RADIUS = 1.1f;
-    const float MIDSECTION = PI * RADIUS * RADIUS;
     const int MAX_VELOCITY_LEVEL =  3;
     const int MIN_VELOCITY_LEVEL = -3;
+    Vector3 forwardDirection => new Vector3(Mathf.Sin(transform.rotation.eulerAngles.y * Mathf.Deg2Rad), 0f, Mathf.Cos(transform.rotation.eulerAngles.y * Mathf.Deg2Rad));
     /// <summary>
     /// with 3800 Nutons sphere moves at speed around 5 m/s
     /// </summary>
@@ -25,22 +26,24 @@ public class BathysphereMove : MonoBehaviour
     /// <summary>
     /// for debugging
     /// </summary>
-    public float _frictionForceContribution;
     Vector3 velocity => rb.velocity;
+    Vector3 forwardVelocityDirection => velocity.normalized;
+    Vector3 forwardVelocity => forwardDirection * Vector3.Dot(forwardDirection, forwardVelocityDirection);
     float velocityMagnitude => velocity.magnitude;
     float Reynolds => velocityMagnitude * 2 * RADIUS * medium.DENSITY / medium.DYNAMIC_VISCOUSITY;
-    bool areWeMovingForward => Vector3.Dot(velocity, Vector3.forward) > 0;
-    public int torqueDirection = 0;
+    bool areWeMovingForward => Vector3.Dot(velocity, forwardDirection) > 0;
+    [SerializeField] int torqueDirection = 0;
+    [SerializeField] float _w_frictionForceContribution;
     public float BASE_TORQUE_FORCE = .1f;
 
     bool breakForceEnabled = false;
     /// <summary>
     /// for debugging. Later i have to make this field private
     /// </summary>
-    public int velocityLevel = 0;
+    [SerializeField] int velocityLevel = 0;
 
 
-    public float _totalForce;
+    [SerializeField] float _w_totalForce;
     void IncreaseVelocityLevel() { ChangeVelocityLevel(1); }
     void DecreaseVelocityLevel() { ChangeVelocityLevel(-1); }
     void EnableBrakeForce() { breakForceEnabled = true; }
@@ -94,39 +97,32 @@ public class BathysphereMove : MonoBehaviour
     {
         if (rb == null)
             Console.WriteLine("rigid body is null!!! Add rigidbody to Bathysphere!");
-        float dragForce = GetDragForce();
-        float fricForce = GetFrictionForce();
-        float totalForce = dragForce - fricForce;
-        if (breakForceEnabled) {
-            totalForce -= GetBrakeForce();
-        }
-        _frictionForceContribution = Mathf.Abs(fricForce) / (Mathf.Abs(dragForce) + Math.Abs(fricForce)) * 100;
+        Vector3 dragForce = GetDragForce();
+        Vector3 fricForce = GetForwardFrictionForce();
+        Vector3 totalForce = dragForce + fricForce;
+        totalForce += GetBrakeForce();
+        totalForce += GetLateralFrictionForce();
+        _w_frictionForceContribution = fricForce.magnitude / (dragForce.magnitude - fricForce.magnitude) * 100;
         
-        rb.AddForce(Vector3.forward * totalForce);
-        _totalForce = totalForce;
+        rb.AddForce(totalForce);
+        _w_totalForce = totalForce.magnitude;
         rb.AddTorque(Vector3.up * BASE_TORQUE_FORCE * torqueDirection);
     }
     /// <summary>
     /// Evaluating braking force, which slows down vehicle
     /// </summary>
     /// <returns>braking force, SI units</returns>
-    float GetBrakeForce(){
-        if (velocityMagnitude < THRESHOLD){
-            return 0;
+    Vector3 GetBrakeForce(){
+        if (velocityMagnitude < THRESHOLD || !breakForceEnabled){
+            return Vector3.zero;
         }
-        float force = Mathf.Sqrt(velocityMagnitude) * 3 * BASE_DRAG_FORCE;
-        if (!areWeMovingForward)
-            force *= -1;
+        Vector3 force = - Mathf.Sqrt(velocityMagnitude) * 3 * BASE_DRAG_FORCE * forwardVelocityDirection;
         return force;
     }
-    /// <summary>
-    /// Evaluating the force of liquid friction
-    /// </summary>
-    /// <returns>force of liquid friction, SI units</returns>
-    float GetFrictionForce()
+    float StocksSphereFriction()
     {
         if (velocityMagnitude < THRESHOLD)
-            return 0;
+            return 0f;
         float force = 0;
         float _Re = Reynolds;
         if (_Re < THRESHOLD)
@@ -138,19 +134,32 @@ public class BathysphereMove : MonoBehaviour
         else
             force = .44f;
         force *= 0.5f * medium.DENSITY * velocityMagnitude * velocityMagnitude * MIDSECTION;
-        if (!areWeMovingForward)
-            force *= -1;
         return force;
+    }
+    /// <summary>
+    /// Evaluating the force of liquid friction
+    /// </summary>
+    /// <returns>force of liquid friction, SI units</returns>
+    Vector3 GetForwardFrictionForce()
+    {
+        return -StocksSphereFriction() * forwardDirection;
+    }
+    Vector3 GetLateralFrictionForce()
+    {
+        Vector3 lateralVelocityDirection = velocity - velocity.magnitude * forwardVelocityDirection;
+
+        float force = 50f * medium.DENSITY * Mathf.Sqrt(velocityMagnitude) * velocityMagnitude * MIDSECTION;
+        return -lateralVelocityDirection.normalized * force;
     }
     /// <summary>
     /// Evaluating dragging force of engines
     /// </summary>
     /// <returns>dragging force, SI units</returns>
-    float GetDragForce()
+    Vector3 GetDragForce()
     {
         if (velocityLevel == 0)
-            return 0;
-        float force = velocityLevel * BASE_DRAG_FORCE * dragScaleFactor;
+            return Vector3.zero;
+        Vector3 force = velocityLevel * BASE_DRAG_FORCE * dragScaleFactor * forwardDirection;
         return force;
     }
 
