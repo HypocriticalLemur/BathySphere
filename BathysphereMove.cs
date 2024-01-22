@@ -11,17 +11,17 @@ public class BathysphereMove : MonoBehaviour
     /// <summary>
     /// threshold for Reynolds number and velocity magnitude
     /// </summary>
-    const float THRESHOLD = 1e-6f;
+    const float THRESHOLD = 1e-4f;
     const float PI = 3.1415926f;
     const float RADIUS = 1.1f;
     const float MIDSECTION = PI * RADIUS * RADIUS;
-    const int MAX_VELOCITY_LEVEL = 3;
+    const int MAX_VELOCITY_LEVEL =  3;
     const int MIN_VELOCITY_LEVEL = -3;
     /// <summary>
     /// with 3800 Nutons sphere moves at speed around 5 m/s
     /// </summary>
     const float BASE_DRAG_FORCE = 5000f;
-    float dragScaleFactor = .25f;
+    float dragScaleFactor = .5f;
     /// <summary>
     /// for debugging
     /// </summary>
@@ -30,6 +30,8 @@ public class BathysphereMove : MonoBehaviour
     float velocityMagnitude => velocity.magnitude;
     float Reynolds => velocityMagnitude * 2 * RADIUS * medium.DENSITY / medium.DYNAMIC_VISCOUSITY;
     bool areWeMovingForward => Vector3.Dot(velocity, Vector3.forward) > 0;
+    public int torqueDirection = 0;
+    public float BASE_TORQUE_FORCE = .1f;
 
     bool breakForceEnabled = false;
     /// <summary>
@@ -42,6 +44,9 @@ public class BathysphereMove : MonoBehaviour
     void IncreaseVelocityLevel() { ChangeVelocityLevel(1); }
     void DecreaseVelocityLevel() { ChangeVelocityLevel(-1); }
     void EnableBrakeForce() { breakForceEnabled = true; }
+    void EnableTorqueRight() { torqueDirection = 1; }
+    void EnableTorqueLeft() { torqueDirection = -1; }
+    void DisableTorque() { torqueDirection = 0; }
     void DisableBrakeForce() { breakForceEnabled = false; }
     /// <summary>
     /// Change velocityLevel by a given level (this.velocityLevel += velocityLevel)
@@ -95,10 +100,11 @@ public class BathysphereMove : MonoBehaviour
         if (breakForceEnabled) {
             totalForce -= GetBrakeForce();
         }
-        _frictionForceContribution = fricForce / dragForce * 100;
+        _frictionForceContribution = Mathf.Abs(fricForce) / (Mathf.Abs(dragForce) + Math.Abs(fricForce)) * 100;
         
         rb.AddForce(Vector3.forward * totalForce);
         _totalForce = totalForce;
+        rb.AddTorque(Vector3.up * BASE_TORQUE_FORCE * torqueDirection);
     }
     /// <summary>
     /// Evaluating braking force, which slows down vehicle
@@ -165,10 +171,12 @@ public class BathysphereMove : MonoBehaviour
         userInput._actions[UserActions.Forward ].Add(new DelegateKeyAction(delegate () { IncreaseVelocityLevel(); }, null) );
         userInput._actions[UserActions.Backward].Add(new DelegateKeyAction(delegate () { DecreaseVelocityLevel(); }, null));
         userInput._actions[UserActions.Brake   ].Add(new DelegateKeyAction(delegate () { EnableBrakeForce(); }, delegate () { DisableBrakeForce(); }));
-/*        userInput.MoveForward  += IncreaseVelocityLevel;
-        userInput.MoveBackward += DecreaseVelocityLevel;
-        userInput.EnableBrake  += EnableBrakeForce;
-        userInput.DisableBrake += DisableBrakeForce;*/
+        userInput._actions[UserActions.Left].Add(new DelegateKeyAction(delegate () { EnableTorqueLeft(); }, delegate () { DisableTorque(); }));
+        userInput._actions[UserActions.Right].Add(new DelegateKeyAction(delegate () { EnableTorqueRight(); }, delegate () { DisableTorque(); }));
+        /*        userInput.MoveForward  += IncreaseVelocityLevel;
+                userInput.MoveBackward += DecreaseVelocityLevel;
+                userInput.EnableBrake  += EnableBrakeForce;
+                userInput.DisableBrake += DisableBrakeForce;*/
     }
 
     // Update is called once per frame
