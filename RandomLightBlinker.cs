@@ -6,8 +6,8 @@ public class RandomLightBlinker : MonoBehaviour
 {
     Animator animator;
     bool animated => animator != null;
-    const float MIN_IDLE_TIME_SECONDS = 10f;
-    const float MAX_IDLE_TIME_SECONDS = 20f;
+    const float MIN_IDLE_TIME_SECONDS = .5f*60f;
+    const float MAX_IDLE_TIME_SECONDS = 3f*60f;
     public bool _blinks = false;
     public float _idle_time = 0f;
     float idleClipLength = 0f;

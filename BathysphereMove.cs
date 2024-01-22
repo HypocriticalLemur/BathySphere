@@ -15,13 +15,13 @@ public class BathysphereMove : MonoBehaviour
     const float THRESHOLD = 1e-4f;
     const float PI = 3.1415926f;
     const float RADIUS = 1.1f;
-    const int MAX_VELOCITY_LEVEL =  3;
-    const int MIN_VELOCITY_LEVEL = -3;
-    Vector3 forwardDirection => new Vector3(Mathf.Sin(transform.rotation.eulerAngles.y * Mathf.Deg2Rad), 0f, Mathf.Cos(transform.rotation.eulerAngles.y * Mathf.Deg2Rad));
+    const int MAX_VELOCITY_LEVEL =  5;
+    const int MIN_VELOCITY_LEVEL = -5;
+    Vector3 forwardDirection => new Vector3(-Mathf.Sin(-transform.rotation.eulerAngles.y * Mathf.Deg2Rad), 0f, Mathf.Cos(transform.rotation.eulerAngles.y * Mathf.Deg2Rad));
     /// <summary>
     /// with 3800 Nutons sphere moves at speed around 5 m/s
     /// </summary>
-    const float BASE_DRAG_FORCE = 5000f;
+    const float BASE_DRAG_FORCE = 10000f;
     float dragScaleFactor = .5f;
     /// <summary>
     /// for debugging
@@ -142,14 +142,17 @@ public class BathysphereMove : MonoBehaviour
     /// <returns>force of liquid friction, SI units</returns>
     Vector3 GetForwardFrictionForce()
     {
-        return -StocksSphereFriction() * forwardDirection;
+        Vector3 force = -StocksSphereFriction() * forwardVelocityDirection;
+        Debug.DrawLine(transform.position, transform.position + force / BASE_DRAG_FORCE, Color.white);
+        return force;
     }
     Vector3 GetLateralFrictionForce()
     {
         Vector3 lateralVelocityDirection = velocity - velocity.magnitude * forwardVelocityDirection;
 
-        float force = 50f * medium.DENSITY * Mathf.Sqrt(velocityMagnitude) * velocityMagnitude * MIDSECTION;
-        return -lateralVelocityDirection.normalized * force;
+        var force = -lateralVelocityDirection.normalized * 50f * medium.DENSITY * Mathf.Sqrt(velocityMagnitude) * velocityMagnitude * MIDSECTION;
+        Debug.DrawLine(transform.position, transform.position + force / BASE_DRAG_FORCE, Color.green);
+        return force;
     }
     /// <summary>
     /// Evaluating dragging force of engines
@@ -160,6 +163,7 @@ public class BathysphereMove : MonoBehaviour
         if (velocityLevel == 0)
             return Vector3.zero;
         Vector3 force = velocityLevel * BASE_DRAG_FORCE * dragScaleFactor * forwardDirection;
+        Debug.DrawLine(transform.position, transform.position+force / BASE_DRAG_FORCE, Color.red);
         return force;
     }
 
